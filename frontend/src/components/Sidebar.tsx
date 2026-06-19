@@ -1,16 +1,12 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Sidebar() {
   return (
     <aside className="h-screen w-64 fixed left-0 top-0 bg-[#04201d] rounded-r-[32px] flex flex-col py-stack-md px-4 shadow-lg z-30">
-      <div className="mb-stack-lg px-2 flex items-center gap-3">
-        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-          <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>water_drop</span>
-        </div>
-        <div>
-          <h1 className="font-headline-sm text-[24px] font-bold text-white leading-tight">HackFlow</h1>
-          <p className="font-label-sm text-[12px] text-white/70">Organizer Portal</p>
-        </div>
+      <div className="mb-stack-lg px-2 flex flex-col items-start gap-1">
+        <Image src="/logo.svg" alt="HackOS" width={140} height={40} className="h-10 w-auto object-contain brightness-0 invert" />
+        <p className="font-label-sm text-[12px] text-white/70 ml-1 opacity-80">Organizer Portal</p>
       </div>
       <nav className="flex-1 space-y-2">
         <Link href="/organizer/dashboard" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">

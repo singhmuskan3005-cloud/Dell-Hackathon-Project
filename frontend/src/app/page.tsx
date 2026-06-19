@@ -53,7 +53,9 @@ export default function LandingPage() {
       {/* TopNavBar */}
       <header className="bg-surface/80 dark:bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 dark:border-outline/20 docked full-width top-0 sticky z-50">
         <nav className="flex justify-between items-center px-5 md:px-margin-desktop h-20 w-full max-w-[1280px] mx-auto">
-          <div className="font-display-lg text-[32px] md:text-[48px] text-primary dark:text-primary-fixed tracking-tight">HackFlow</div>
+          <div className="flex-shrink-0 pt-2">
+            <Image src="/logo.svg" alt="HackOS" width={140} height={40} className="h-10 w-auto object-contain" />
+          </div>
           <div className="hidden md:flex items-center gap-12">
             <Link href="#" className="text-primary font-bold border-b-2 border-primary pb-1 text-body-md">Features</Link>
             <Link href="#" className="text-on-surface-variant hover:text-primary transition-colors text-body-md">Solutions</Link>
@@ -82,7 +84,7 @@ export default function LandingPage() {
               Architecting the Future of <span className="italic text-secondary">Innovation</span>
             </h1>
             <p className="font-body-lg text-[18px] text-on-surface-variant max-w-2xl mx-auto mb-12 leading-relaxed">
-              HackFlow provides a tactile, professional-grade platform for organizing world-class hackathons with ease. From registration to real-time analytics.
+              HackOS provides a tactile, professional-grade platform for organizing world-class hackathons with ease. From registration to real-time analytics.
             </p>
             <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
               <Link href="/auth/participant">
@@ -211,7 +213,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Testimonial 1 */}
               <div className="p-12 rounded-3xl border border-outline-variant/30 bg-surface flex flex-col gap-6 hover:border-primary/40 transition-colors">
-                <p className="font-body-lg text-[18px] text-on-surface italic">"The editorial feel of HackFlow immediately set our event apart. It felt less like a tech conference and more like a high-end workshop. Our participants loved the clarity."</p>
+                <p className="font-body-lg text-[18px] text-on-surface italic">"The editorial feel of HackOS immediately set our event apart. It felt less like a tech conference and more like a high-end workshop. Our participants loved the clarity."</p>
                 <div className="flex items-center gap-6 mt-auto">
                   <img className="w-14 h-14 rounded-full object-cover bg-surface-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDecfe9YPIg6_PBpgbIgbVBxrs3Nn8e-UBFd1emjk8WuI4f1UDTl9oFUPeYeZ3NpRESyTVYlkp5eTf3cVnmbeAF8qUGRNKuA140uBlIprztTkATMID3f_MY0D5m7GykFNGqr-wDW_oKVRPgy8xhsogyhKPIiVdhNhtYyfLoSNI4wXkCZ5jP17hzitLWW8OFN2NOA6O6DA0icVfW6caKzyc9w-YT1_pTeEF821f_dc_qlpaMi45_0Vct6rKSATZLWM2b38qfRAHzROw" alt="Elena Vance" />
                   <div>
@@ -252,7 +254,7 @@ export default function LandingPage() {
       <footer className="bg-surface-container dark:bg-surface-container-high border-t border-outline-variant/20">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 px-5 md:px-margin-desktop py-12 max-w-[1280px] mx-auto">
           <div className="col-span-1 md:col-span-1">
-            <div className="font-display-lg text-[24px] text-primary dark:text-primary-fixed mb-3">HackFlow</div>
+            <Image src="/logo.svg" alt="HackOS" width={120} height={34} className="h-8 w-auto object-contain mb-4" />
             <p className="text-on-surface-variant text-[16px] leading-relaxed opacity-80">
               End-to-End Hackathon Management Platform
             </p>
@@ -282,7 +284,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="border-t border-outline-variant/10 py-6 text-center max-w-[1280px] mx-auto">
-          <p className="text-on-surface-variant text-[12px] opacity-60">© 2024 HackFlow. End-to-End Hackathon Management Platform.</p>
+          <p className="text-on-surface-variant text-[12px] opacity-60">© 2024 HackOS. End-to-End Hackathon Management Platform.</p>
         </div>
       </footer>
     </div>

@@ -13,7 +13,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "HackFlow Organizer Portal",
+  title: "HackOS Organizer Portal",
   description: "Modern hackathon management suite",
 };
 
