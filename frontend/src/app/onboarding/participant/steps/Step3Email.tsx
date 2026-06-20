@@ -6,15 +6,24 @@ import { ArrowRight, Mail, CheckCircle2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
+import { useSearchParams } from "next/navigation";
 
 type OTPState = "idle" | "sending" | "sent" | "verifying" | "verified";
 
 export default function Step3Email() {
+  const searchParams = useSearchParams();
+  const urlEmail = searchParams.get("email");
   const { email, updateData, nextStep } = useOnboardingStore();
-  const [localEmail, setLocalEmail] = useState(email);
+  const [localEmail, setLocalEmail] = useState(email || urlEmail || "");
   const [otpState, setOtpState] = useState<OTPState>("sent");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    if (urlEmail && !email) {
+      updateData({ email: urlEmail });
+    }
+  }, [urlEmail, email, updateData]);
 
   useEffect(() => {
     const fetchUser = async () => {
