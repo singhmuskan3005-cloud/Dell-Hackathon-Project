@@ -65,7 +65,7 @@ async def upload_resume(file: UploadFile = File(...)):
         for page in pdf_reader.pages:
             text += page.extract_text() + "\n"
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to parse PDF: {str(e)}")
+        raise HTTPException(status_code=400, detail="The provided file is not a valid PDF or is corrupted. Please upload a valid PDF resume.")
         
     if not text.strip():
         raise HTTPException(status_code=400, detail="Could not extract any text from the PDF")
@@ -252,6 +252,23 @@ async def submit_registration(payload: RegistrationPayload):
         "decision": decision,
         "score": final_score
     }
+
+class BackgroundResumePayload(BaseModel):
+    user_id: str
+    raw_text: str
+
+@router.post("/process_resume_background")
+async def process_resume_background(payload: BackgroundResumePayload):
+    """
+    Triggers the Celery worker to parse the resume using the LLM
+    and update the participant's skill vector and embeddings in the background.
+    """
+    from backend.app.worker import process_resume_task
+    
+    # Send the task to Celery
+    task = process_resume_task.delay(payload.user_id, payload.raw_text)
+    
+    return {"status": "queued", "task_id": task.id}
 
 @router.post("/{registration_id}/approve")
 async def approve_registration(registration_id: str):

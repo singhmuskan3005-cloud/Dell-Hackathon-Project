@@ -1,132 +1,72 @@
-from __future__ import annotations
-
-from typing import Any
-from uuid import UUID
-
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from typing import List, Optional
+import uuid
 
-from backend.app.database import execute, fetch_all, fetch_one, json_param
+from ..database import execute, fetch_all
+from ..worker import detect_bias_task
 
 router = APIRouter()
 
+class EvaluationSubmitRequest(BaseModel):
+    hackathon_id: str
+    assignment_id: str
+    reviewer_id: str
+    idea_id: str
+    score: float
+    feedback: Optional[str] = None
 
-class EvaluationCreate(BaseModel):
-    hackathon_id: UUID
-    submission_id: UUID
-    reviewer_id: UUID
-    assignment_id: UUID | None = None
-    scores: dict[str, float] = Field(default_factory=dict)
-    feedback: str | None = None
+class BiasReportResponse(BaseModel):
+    alerts: List[dict]
 
+@router.post("/submit")
+async def submit_evaluation(request: EvaluationSubmitRequest):
+    """
+    Submits a new evaluation score and triggers the background bias detection task.
+    """
+    eval_id = str(uuid.uuid4())
+    
+    query = """
+    INSERT INTO evaluations (evaluation_id, assignment_id, reviewer_id, idea_id, score, feedback, created_at)
+    VALUES (%s, %s, %s, %s, %s, %s, NOW())
+    """
+    try:
+        execute(query, (
+            eval_id,
+            request.assignment_id,
+            request.reviewer_id,
+            request.idea_id,
+            request.score,
+            request.feedback
+        ))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to submit evaluation: {str(e)}")
 
-def _audit(entity_type: str, entity_id: str | None, action: str, metadata: dict[str, Any]) -> None:
-    execute(
-        "SELECT public.append_audit_event(%s, %s::uuid, %s, NULL, %s::jsonb)",
-        (entity_type, entity_id, action, json_param(metadata)),
-    )
+    # Trigger background bias detection
+    detect_bias_task.delay(request.hackathon_id)
 
-
-def _weighted_score(hackathon_id: str, scores: dict[str, float]) -> float:
-    rubrics = fetch_all(
-        "SELECT name, weight FROM public.rubrics WHERE hackathon_id = %s ORDER BY display_order",
-        (hackathon_id,),
-    )
-    if not scores:
-        return 0.0
-    if not rubrics:
-        return sum(scores.values()) / len(scores)
-
-    total = 0.0
-    matched_weight = 0
-    lower_scores = {key.lower(): value for key, value in scores.items()}
-    for rubric in rubrics:
-        rubric_name = rubric["name"].lower()
-        value = lower_scores.get(rubric_name)
-        if value is None:
-            for score_name, score_value in lower_scores.items():
-                if rubric_name in score_name or score_name in rubric_name:
-                    value = score_value
-                    break
-        if value is not None:
-            weight = int(rubric["weight"])
-            total += float(value) * weight
-            matched_weight += weight
-
-    if matched_weight == 0:
-        return sum(scores.values()) / len(scores)
-    return total / matched_weight
+    return {"status": "success", "evaluation_id": eval_id}
 
 
-@router.get("/")
-async def list_evaluations(hackathon_id: UUID | None = None):
-    if hackathon_id:
-        return fetch_all(
-            "SELECT * FROM public.evaluations WHERE hackathon_id = %s ORDER BY submitted_at DESC",
-            (str(hackathon_id),),
-        )
-    return fetch_all("SELECT * FROM public.evaluations ORDER BY submitted_at DESC LIMIT 100")
-
-
-@router.post("/")
-async def submit_evaluation(payload: EvaluationCreate):
-    assignment_id = str(payload.assignment_id) if payload.assignment_id else None
-    if assignment_id is None:
-        assignment = fetch_one(
-            """
-            SELECT id FROM public.assignments
-            WHERE submission_id = %s AND reviewer_id = %s
-            """,
-            (str(payload.submission_id), str(payload.reviewer_id)),
-        )
-        assignment_id = assignment["id"] if assignment else None
-
-    weighted_score = _weighted_score(str(payload.hackathon_id), payload.scores)
-    row = execute(
-        """
-        INSERT INTO public.evaluations (
-            hackathon_id, assignment_id, submission_id, reviewer_id,
-            scores, weighted_score, feedback
-        )
-        VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s)
-        ON CONFLICT (submission_id, reviewer_id)
-        DO UPDATE SET
-            scores = EXCLUDED.scores,
-            weighted_score = EXCLUDED.weighted_score,
-            feedback = EXCLUDED.feedback,
-            submitted_at = NOW()
-        RETURNING *
-        """,
-        (
-            str(payload.hackathon_id),
-            assignment_id,
-            str(payload.submission_id),
-            str(payload.reviewer_id),
-            json_param(payload.scores),
-            weighted_score,
-            payload.feedback,
-        ),
-    )
-    if not row:
-        raise HTTPException(status_code=500, detail="Failed to save evaluation")
-
-    if assignment_id:
-        execute(
-            "UPDATE public.assignments SET status = 'completed' WHERE id = %s",
-            (assignment_id,),
-        )
-    execute(
-        "UPDATE public.submissions SET status = 'evaluated' WHERE id = %s",
-        (str(payload.submission_id),),
-    )
-    _audit(
-        "evaluation",
-        row["id"],
-        "submitted",
-        {
-            "hackathon_id": str(payload.hackathon_id),
-            "submission_id": str(payload.submission_id),
-            "weighted_score": weighted_score,
-        },
-    )
-    return row
+@router.get("/bias-report", response_model=BiasReportResponse)
+async def get_bias_report():
+    """
+    Fetches the latest BIAS_ALERT logs from the audit_logs table.
+    """
+    query = """
+    SELECT payload, created_at
+    FROM audit_logs
+    WHERE event_type = 'BIAS_ALERT'
+    ORDER BY created_at DESC
+    LIMIT 50
+    """
+    try:
+        results = fetch_all(query)
+        alerts = []
+        for r in results:
+            alert = r['payload']
+            alert['created_at'] = r['created_at']
+            alerts.append(alert)
+        return {"alerts": alerts}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch bias report: {str(e)}")
