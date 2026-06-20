@@ -3,12 +3,13 @@ from collections import defaultdict
 from scipy.stats import mannwhitneyu
 from sqlalchemy import text
 
-from app.db.db import BiasAlert
-
-from app.service.severity_classifier import (
-    classify_severity
+from app.models.bias_alert import (
+    BiasAlert
 )
 
+from app.services.fairness_engine.severity_classifier import (
+    classify_severity
+)
 ADJUSTED_ALPHA = 0.0083
 
 # use 20 in production

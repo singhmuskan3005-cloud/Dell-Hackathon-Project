@@ -1,7 +1,10 @@
 import numpy as np
 
-from app.db.db import (
-    Evaluation,
+from app.models.evaluation import (
+    Evaluation
+)
+
+from app.models.ranking_confidence import (
     RankingConfidence
 )
 

@@ -2,13 +2,14 @@ from app.core.celery_app import (
     celery_app
 )
 
-from app.db.database import (
+from app.deps import (
     SessionLocal
 )
 
-from app.service.fairness_pipeline import (
+from app.services.fairness_engine.fairness_pipeline import (
     run_fairness_pipeline
 )
+
 
 @celery_app.task
 def fairness_pipeline_task(

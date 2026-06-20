@@ -4,8 +4,11 @@ import numpy as np
 from scipy.stats import median_abs_deviation
 from sqlalchemy.orm import Session
 
-from app.db.db import (
-    ReviewerStats,
+from app.models.reviewer_stats import (
+    ReviewerStats
+)
+
+from app.models.evaluation import (
     Evaluation
 )
 

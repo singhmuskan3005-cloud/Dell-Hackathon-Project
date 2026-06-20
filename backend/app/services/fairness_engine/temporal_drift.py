@@ -1,19 +1,22 @@
 from scipy.stats import spearmanr
 import math
 
-from app.db.database import SessionLocal
-from app.db.db import (
-    BiasAlert,
-    Evaluation,
+from app.deps import SessionLocal
+
+from app.models.bias_alert import (
+    BiasAlert
+)
+
+from app.models.evaluation import (
+    Evaluation
+)
+
+from app.models.reviewer_stats import (
     ReviewerStats
 )
 
-from app.service.severity_classifier import (
+from app.services.fairness_engine.severity_classifier import (
     classify_severity
-)
-
-from app.service.audit_service import (
-    log_event
 )
 
 ALPHA = 0.0083
@@ -107,14 +110,6 @@ def detect_temporal_drift(
 
         db.add(alert)
 
-        log_event(
-    db,
-    "BIAS_ALERT_CREATED",
-    {
-        "alert_type": "TEMPORAL_DRIFT",
-        "reviewer_id": str(reviewer_id),
-        "severity": severity
-    })
         db.flush()
 
         return alert

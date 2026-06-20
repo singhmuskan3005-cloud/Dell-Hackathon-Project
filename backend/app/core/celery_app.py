@@ -9,5 +9,10 @@ celery_app = Celery(
 celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
-    accept_content=["json"]
+    accept_content=["json"],
+    timezone="UTC",
+    enable_utc=True,
 )
+
+import app.tasks.reviewer_tasks
+import app.tasks.fairness_tasks

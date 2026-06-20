@@ -1,4 +1,4 @@
-from app.db.db import BiasAlert
+from app.models.bias_alert import BiasAlert
 
 
 def get_open_alerts(db):

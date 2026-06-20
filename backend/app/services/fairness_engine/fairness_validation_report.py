@@ -1,13 +1,16 @@
 import uuid
 import numpy as np
 
-from app.db.db import (
-    BiasAlert,
-    RankingConfidence,
-    FairnessReport
+from app.models.bias_alert import (
+    BiasAlert
 )
-from app.service.audit_service import (
-    log_event
+
+from app.models.ranking_confidence import (
+    RankingConfidence
+)
+
+from app.models.fairness_report import (
+    FairnessReport
 )
 
 def determine_status(
@@ -92,16 +95,6 @@ def generate_fairness_report(
     )
 
     db.add(report)
-
-    log_event(
-    db,
-    "FAIRNESS_REPORT_GENERATED",
-    {
-        "round_id": round_id,
-        "total_alerts": total_alerts,
-        "critical_alerts": critical_alerts,
-        "publication_status": publication_status
-    })
 
     db.commit()
 

@@ -1,7 +1,10 @@
 import numpy as np
 
-from app.db.db import (
-    ReviewerStats,
+from app.models.reviewer_stats import (
+    ReviewerStats
+)
+
+from app.models.bias_alert import (
     BiasAlert
 )
 

@@ -3,11 +3,12 @@ from collections import defaultdict
 from scipy.stats import mannwhitneyu
 from sqlalchemy import text
 
-from app.db.db import BiasAlert
-from app.service.severity_classifier import classify_severity
+from app.models.bias_alert import (
+    BiasAlert
+)
 
-from app.service.audit_service import (
-    log_event
+from app.services.fairness_engine.severity_classifier import (
+    classify_severity
 )
 
 ADJUSTED_ALPHA = 0.0083
@@ -103,15 +104,6 @@ def detect_gender_bias(
 
             db.add(alert)
 
-            log_event(
-                db,
-                "BIAS_ALERT_CREATED",
-                {
-                    "alert_type": "GENDER_BIAS",
-                    "reviewer_id": str(reviewer_id),
-                    "severity": severity
-                }
-)
             db.flush()
 
             return alert

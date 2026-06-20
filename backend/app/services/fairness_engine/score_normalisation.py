@@ -1,15 +1,21 @@
 import numpy as np
 from sqlalchemy.orm import Session
 
-from app.db.db import (
-    ReviewerStats,
+from app.models.reviewer_stats import (
+    ReviewerStats
+)
+
+from app.models.normalised_score import (
     NormalizedScore
 )
 
-from app.db.db import Evaluation
-from app.service.reviewer_stats_service import compute_reviewer_stats
+from app.models.evaluation import (
+    Evaluation
+)
 
-
+from app.services.fairness_engine.reviewer_stats_service import (
+    compute_reviewer_stats
+)
 MIN_REVIEWS = 5
 EPSILON = 1e-6
 
