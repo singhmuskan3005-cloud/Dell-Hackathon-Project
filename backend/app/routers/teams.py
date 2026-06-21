@@ -113,13 +113,172 @@ async def delete_team(team_id: str, db: Session = Depends(get_db)):
     return {"detail": "deleted"}
 
 
+# --------------- Team Formation Invites ---------------
+
+from ..models.invite import Invite, InviteStatus, InviteDirection
+from pydantic import BaseModel
+
+class InviteRequest(BaseModel):
+    participant_id: str
+    leader_id: str
+
+class JoinRequest(BaseModel):
+    participant_id: str
+
+class InviteRespondRequest(BaseModel):
+    responder_id: str
+    accept: bool
+
+@router.post("/{team_id}/invite")
+async def invite_participant(team_id: str, data: InviteRequest, db: Session = Depends(get_db)):
+    """Leader invites a participant to the team."""
+    team = db.query(Team).filter(Team.team_id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+        
+    try:
+        from app.services.ai.core.schemas import Team as TeamSchema
+        # Convert to Pydantic schema for the logic
+        team_schema = TeamSchema(
+            team_id=str(team.team_id),
+            name=team.name,
+            leader_id=str(team.member_ids[0]) if team.member_ids else None, # Simplified leader logic
+            member_ids=[str(m) for m in team.member_ids],
+            slots_remaining=max(0, 4 - len(team.member_ids)), # Hardcode 4 max size for now
+            is_open=True,
+            is_locked=False
+        )
+        
+        from app.services.ai.pipelines.team_formation.invites import invite_participant as ai_invite
+        invite_schema = ai_invite(team_schema, data.leader_id, data.participant_id)
+        
+        new_invite = Invite(
+            id=uuid.UUID(invite_schema.invite_id),
+            team_id=team.team_id,
+            participant_id=data.participant_id,
+            direction=InviteDirection.LEADER_TO_PARTICIPANT,
+            initiated_by_id=data.leader_id,
+            status=InviteStatus.PENDING
+        )
+        db.add(new_invite)
+        db.commit()
+        return {"status": "success", "invite_id": str(new_invite.id)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{team_id}/request-join")
+async def request_join(team_id: str, data: JoinRequest, db: Session = Depends(get_db)):
+    """Participant requests to join a team."""
+    team = db.query(Team).filter(Team.team_id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+        
+    participant = db.query(Participant).filter(Participant.id == data.participant_id).first()
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participant not found")
+        
+    try:
+        from app.services.ai.core.schemas import Team as TeamSchema, Participant as ParticipantSchema
+        team_schema = TeamSchema(
+            team_id=str(team.team_id),
+            name=team.name,
+            leader_id=str(team.member_ids[0]) if team.member_ids else None,
+            member_ids=[str(m) for m in team.member_ids],
+            slots_remaining=max(0, 4 - len(team.member_ids)),
+            is_open=True,
+            is_locked=False
+        )
+        participant_schema = ParticipantSchema(
+            id=str(participant.id),
+            name=participant.name or "",
+            college_name=participant.college_name or "",
+            skills=[]
+        )
+        
+        from app.services.ai.pipelines.team_formation.invites import request_to_join
+        invite_schema = request_to_join(team_schema, participant_schema)
+        
+        new_invite = Invite(
+            id=uuid.UUID(invite_schema.invite_id),
+            team_id=team.team_id,
+            participant_id=str(participant.id),
+            direction=InviteDirection.PARTICIPANT_TO_LEADER,
+            initiated_by_id=str(participant.id),
+            status=InviteStatus.PENDING
+        )
+        db.add(new_invite)
+        db.commit()
+        return {"status": "success", "invite_id": str(new_invite.id)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/invites/{invite_id}/respond")
+async def respond_to_invite(invite_id: str, data: InviteRespondRequest, db: Session = Depends(get_db)):
+    """Respond to an invite."""
+    invite = db.query(Invite).filter(Invite.id == invite_id).first()
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
+        
+    team = db.query(Team).filter(Team.team_id == invite.team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+        
+    try:
+        from app.services.ai.core.schemas import Team as TeamSchema, Invite as InviteSchema
+        
+        team_schema = TeamSchema(
+            team_id=str(team.team_id),
+            name=team.name,
+            leader_id=str(team.member_ids[0]) if team.member_ids else None,
+            member_ids=list(team.member_ids),
+            slots_remaining=max(0, 4 - len(team.member_ids)),
+            is_open=True,
+            is_locked=False
+        )
+        
+        invite_schema = InviteSchema(
+            invite_id=str(invite.id),
+            team_id=str(invite.team_id),
+            participant_id=str(invite.participant_id),
+            direction=invite.direction.value,
+            initiated_by_id=str(invite.initiated_by_id),
+            status=invite.status.value,
+            created_at=invite.created_at.isoformat()
+        )
+        
+        from app.services.ai.pipelines.team_formation.invites import respond_to_invite as ai_respond
+        updated_inv_schema, updated_team_schema = ai_respond(
+            invite=invite_schema,
+            responder_id=data.responder_id,
+            accept=data.accept,
+            team=team_schema
+        )
+        
+        invite.status = InviteStatus(updated_inv_schema.status)
+        from datetime import datetime, timezone
+        invite.responded_at = datetime.now(timezone.utc)
+        
+        if updated_team_schema:
+            team.member_ids = updated_team_schema.member_ids
+            # Update the participant's team_id
+            p = db.query(Participant).filter(Participant.id == invite.participant_id).first()
+            if p:
+                p.team_id = team.team_id
+                
+        db.commit()
+        return {"status": "success", "invite_status": invite.status.value}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # --------------- AI team formation endpoint ---------------
 
 @router.post("/form")
 async def trigger_team_formation(background_tasks: BackgroundTasks):
     """Triggers coverage-driven team assembly as a background task."""
-    from participant_ai.pipelines.team_formation.formation import form_teams
-    from participant_ai.core.schemas import Participant as ParticipantSchema, PSRequirement, SkillVector
+    from app.services.ai.pipelines.team_formation.formation import form_teams
+    from app.services.ai.core.schemas import Participant as ParticipantSchema, PSRequirement, SkillVector
 
     def run_formation():
         from ..deps import SessionLocal

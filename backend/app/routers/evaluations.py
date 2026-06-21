@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from ..database import execute, fetch_all
 from ..deps import get_db
 from ..models.evaluation import Evaluation
-from ..worker import detect_bias_task
 
 router = APIRouter()
 
@@ -46,9 +45,6 @@ async def submit_evaluation(request: EvaluationSubmitRequest):
         ))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to submit evaluation: {str(e)}")
-
-    # Trigger background bias detection
-    detect_bias_task.delay(request.hackathon_id)
 
     return {"status": "success", "evaluation_id": eval_id}
 
@@ -148,7 +144,7 @@ async def get_evaluation(evaluation_id: str, db: Session = Depends(get_db)):
 
 from ..models.team import Team
 from ..models.idea_submission import IdeaSubmission
-from participant_ai.pipelines.feedback.nlg import generate_team_feedback
+from app.services.ai.pipelines.feedback.nlg import generate_team_feedback
 from sqlalchemy import func
 
 @router.post("/compute-results/{hackathon_id}")
@@ -192,3 +188,16 @@ async def compute_results(hackathon_id: str, db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"Successfully computed results and generated feedback for {count} teams."}
 
+class FairnessTriggerRequest(BaseModel):
+    round_id: str
+
+@router.post("/trigger-fairness")
+async def trigger_fairness(request: FairnessTriggerRequest):
+    """Triggers the fairness engine pipeline in the background."""
+    from app.tasks.fairness_tasks import fairness_pipeline_task
+    task = fairness_pipeline_task.delay(request.round_id)
+    return {
+        "status": "queued",
+        "message": "Fairness pipeline started",
+        "task_id": task.id
+    }
