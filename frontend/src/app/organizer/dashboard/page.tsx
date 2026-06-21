@@ -20,6 +20,7 @@ interface Hackathon {
 export default function OrganizerDashboard() {
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -65,13 +66,33 @@ export default function OrganizerDashboard() {
             <Image src="/logo.png" alt="Dell Logo" fill className="object-contain object-left" />
           </div>
         </div>
-        <Link href="/organizer/hackathons/create/step-1">
-          <button className="bg-primary text-white px-4 md:px-5 py-2 rounded-lg font-label-sm hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm">
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            <span className="hidden sm:inline">Create Hackathon</span>
-            <span className="sm:hidden">Create</span>
-          </button>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/organizer/hackathons/create/step-1">
+            <button className="bg-primary text-white px-4 md:px-5 py-2 rounded-lg font-label-sm hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm">
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              <span className="hidden sm:inline">Create Hackathon</span>
+              <span className="sm:hidden">Create</span>
+            </button>
+          </Link>
+          <div className="relative">
+            <button 
+              onClick={() => setIsProfileOpen(!isProfileOpen)} 
+              className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+            >
+              <span className="material-symbols-outlined text-primary">person</span>
+            </button>
+            {isProfileOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-outline-variant/20 py-2">
+                <Link href="/">
+                  <button className="w-full text-left px-4 py-2 hover:bg-surface-variant/50 text-sm flex items-center gap-2 text-error">
+                    <span className="material-symbols-outlined text-[18px]">logout</span>
+                    Logout
+                  </button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
       </nav>
 
       <div className="pt-24 pb-12 px-4 md:px-6 min-h-screen max-w-7xl mx-auto flex flex-col gap-4 md:gap-6 w-full">
