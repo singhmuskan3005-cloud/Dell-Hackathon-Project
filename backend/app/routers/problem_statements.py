@@ -1,4 +1,5 @@
 import uuid
+from uuid import UUID
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -20,7 +21,7 @@ class ProblemStatementCreate(BaseModel):
     max_size: Optional[int] = 4
 
 class ProblemStatementOut(BaseModel):
-    ps_id: str
+    ps_id: UUID
     title: Optional[str] = None
     raw_text: Optional[str] = None
     required_vector: Optional[dict] = None
