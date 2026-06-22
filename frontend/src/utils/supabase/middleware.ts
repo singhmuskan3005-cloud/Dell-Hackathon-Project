@@ -45,9 +45,19 @@ export async function updateSession(request: NextRequest) {
 
   // Optional: Redirect authenticated users away from auth pages
   if (user && isAuthRoute) {
+    if (request.nextUrl.pathname.startsWith('/auth/reviewer')) {
+      return supabaseResponse;
+    }
+
     const url = request.nextUrl.clone()
-    // Default to participant if we don't know the role yet, or could decode from metadata
-    url.pathname = '/participant/dashboard'
+    const role = user.user_metadata?.role;
+    
+    if (role === 'organizer') {
+      url.pathname = '/organizer/dashboard'
+    } else {
+      url.pathname = '/participant/dashboard'
+    }
+    
     return NextResponse.redirect(url)
   }
 
